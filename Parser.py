@@ -28,9 +28,9 @@ class Parser:
 				self.ants_num = int(line)
 				self.line_id += 1
 				return
-			elif not line or line[0] != '#':
+			elif not line or (line[0] != '#' and line[1] != '#'):
 				raise Exception(f'Line number: {self.line_id + 1}\nInvalid number of ants')
-		self.line_id += 1
+			self.line_id += 1
 
 	def parse_rooms(self):
 		while self.line_id < self.file_len:
