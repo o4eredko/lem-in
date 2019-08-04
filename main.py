@@ -1,6 +1,7 @@
 import sys
 from Parser import Parser
 
+
 def main():
 	try:
 		if len(sys.argv) != 2:
@@ -9,6 +10,7 @@ def main():
 		parser.parse_file()
 	except Exception as e:
 		print(str(e))
+
 
 if __name__ == "__main__":
 	main()
