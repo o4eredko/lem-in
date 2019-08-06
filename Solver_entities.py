@@ -4,3 +4,5 @@ class Room:
 		self.x = int(x)
 		self.y = int(y)
 		self.halls = []
+		self.added_by = None
+		self.route_id = None

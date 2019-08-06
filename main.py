@@ -1,5 +1,6 @@
 import sys
 from Parser import Parser
+from Solver import Solver
 
 
 def main():
@@ -8,6 +9,8 @@ def main():
 			raise Exception("Usage: python lem_in map")
 		parser = Parser(sys.argv[1])
 		parser.parse_file()
+		solver = Solver(parser)
+		solver.solve()
 	except Exception as e:
 		print(str(e))
 

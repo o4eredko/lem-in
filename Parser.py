@@ -1,5 +1,5 @@
 import re
-from Room import Room
+from Solver_entities import Room
 
 
 class Parser:
