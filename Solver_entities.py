@@ -5,4 +5,5 @@ class Room:
 		self.y = int(y)
 		self.halls = []
 		self.added_by = None
-		self.route_id = None
+		self.route_link = None
+		self.ants_in_room = 0

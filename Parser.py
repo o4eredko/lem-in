@@ -99,6 +99,7 @@ class Parser:
 				print(f"\t{hall.name}")
 		print(f"Start room: {self.start.name}")
 		print(f"Start room: {self.end.name}")
+		self.start.ants_in_room = self.ants_num
 
 	def append_halls(self, room_to_link, linked_room):
 		room1 = None
