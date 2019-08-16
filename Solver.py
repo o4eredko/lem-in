@@ -1,5 +1,3 @@
-import copy
-
 class bcolors:
 	HEADER = '\033[95m'
 	OKBLUE = '\033[94m'
@@ -9,6 +7,7 @@ class bcolors:
 	ENDC = '\033[0m'
 	BOLD = '\033[1m'
 	UNDERLINE = '\033[4m'
+
 
 class Solver:
 	def __init__(self, src):
@@ -155,18 +154,13 @@ class Solver:
 		for route in self.final_routes:
 			for room in route:
 				room.route_link = route
+		self.final_routes.sort(key=len)
 		self.move_ants()
 		print(f"{bcolors.UNDERLINE}{bcolors.OKBLUE}Result: {self.steps}{bcolors.ENDC}")
 
 	def route_fits(self, current_route):
 		shorter_routes_len = 0
 		for route in self.final_routes:
-			if len(route) <= len(current_route) and route != current_route:
+			if len(route) < len(current_route) and route != current_route:
 				shorter_routes_len += (len(current_route) - len(route))
 		return self.start.ants_in_room > shorter_routes_len
-
-# Find the shortest route using bfs
-# Delete links inside this route from end to start
-# Find the 2 shortest route
-# Take directions back
-# Remove all inverse edges along with their originals
