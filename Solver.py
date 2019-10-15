@@ -1,4 +1,7 @@
-class bcolors:
+import collections
+
+
+class Colors:
 	HEADER = '\033[95m'
 	OKBLUE = '\033[94m'
 	OKGREEN = '\033[92m'
@@ -11,26 +14,29 @@ class bcolors:
 
 class Solver:
 	def __init__(self, src):
-		self.rooms = src.rooms
+		self._round = 0
+		self.steps = 0
 		self.ants_num = src.ants_num
+		self.rooms = src.rooms
 		self.start = src.start
 		self.end = src.end
-		self.final_routes = []
 		self.routes = []
-		self.round = 0
+		self.final_routes = []
 		self.best_score = None
-		self.ants = [self.start]*self.ants_num
-		self.steps = 0
+		self.ants = [self.start] * self.ants_num
 
-	def bfs(self):
-		self.round += 1
-		visited = set()
-		queue = [self.start]
-		visited.add(self.start)
-		while queue:
-			room = queue.pop(0)
+	def _bfs(self):
+		"""
+		Breadth-First Search. Finds the shortest path and saves it to self.routes
+		:return: bool, True if new route was found, otherwise False
+		"""
+		self._round += 1
+		visited = {self.start}
+		queue = collections.deque((self.start,))
+		while len(queue):
+			room = queue.popleft()
 			if room == self.end:
-				return self.save_route()
+				return self._save_route()
 			for hall in room.halls:
 				if hall not in visited:
 					hall.added_by = room
@@ -38,31 +44,33 @@ class Solver:
 					queue.append(hall)
 		return False
 
-	def save_route(self):
-		self.routes = []
-		for route in self.final_routes:
-			self.routes.append(route)
+	def _save_route(self):
+		# self.routes = self.final_routes.copy()
+		new_route = []
 		tmp = self.end
-		new_route = list()
 		while tmp.added_by and tmp != self.start:
 			new_route.append(tmp)
 			tmp.added_by.halls.remove(tmp)
 			tmp = tmp.added_by
+		new_route.append(self.start)
 		new_route.reverse()
-		new_route = self.swap_routes(new_route)
-		new_route = self.clean_route(new_route)
-		for k in range(len(new_route)):
-			if new_route[k] != self.end:
-				new_route[k].route_link = new_route
 		self.routes.append(new_route)
-		score = self.count_steps()
-		if not self.best_score or score < self.best_score:
-			self.best_score = score
-			self.final_routes = self.routes
-			return True
-		return False
+		return True
 
-	def swap_routes(self, new_route):
+	# new_route = self._swap_routes(new_route)
+	# new_route = self._clean_route(new_route)
+	# for k in range(len(new_route)):
+	# 	if new_route[k] != self.end:
+	# 		new_route[k].route_link = new_route
+	# self.routes.append(new_route)
+	# score = self.count_steps()
+	# if self.best_score is None or score < self.best_score:
+	# 	self.best_score = score
+	# 	self.final_routes = self.routes
+	# 	return True
+	# return False
+
+	def _swap_routes(self, new_route):
 		for i in range(len(self.routes)):
 			for j in range(len(self.routes[i])):
 				room = self.routes[i][j]
@@ -78,13 +86,13 @@ class Solver:
 					new_route.extend(old_route_sliced)
 					self.routes[i] = self.routes[i][:old_route_pos]
 					self.routes[i].extend(new_route_sliced)
-					self.clean_route(self.routes[i])
+					# self._clean_route(self.routes[i])
 					break
 		return new_route
 
 	@staticmethod
-	def clean_route(route):
-		visited = []
+	def _clean_route(route):
+		visited = set()
 		i = 0
 		while i < len(route):
 			current_room = route[i]
@@ -95,8 +103,8 @@ class Solver:
 					route.pop(i)
 					i -= 1
 				i = 0
-				visited = []
-			visited.append(route[i])
+				visited = set()
+			visited.add(route[i])
 			i += 1
 		return route
 
@@ -121,7 +129,7 @@ class Solver:
 							self.start.ants_in_room -= 1
 							self.ants[i] = route[0]
 							route[0].ants_in_room += 1
-							print(f"{bcolors.BOLD}L{i + 1}-{self.ants[i].name}{bcolors.ENDC}", end=' ')
+							print(f"{Colors.BOLD}L{i + 1}-{self.ants[i].name}{Colors.ENDC}", end=' ')
 							break
 				elif self.ants[i] != self.end:
 					route = self.ants[i].route_link
@@ -130,33 +138,19 @@ class Solver:
 						self.ants[i].ants_in_room -= 1
 						self.ants[i] = route[room_id + 1]
 						self.ants[i].ants_in_room += 1
-						print(f"{bcolors.BOLD}L{i + 1}-{self.ants[i].name}{bcolors.ENDC}", end=' ')
+						print(f"{Colors.BOLD}L{i + 1}-{self.ants[i].name}{Colors.ENDC}", end=' ')
 			print('')
 			self.steps += 1
 
 	def print_routes(self):
-		print(f"Round {self.round}:")
-		for route in self.final_routes:
+		print(f"Round {self._round}:")
+		for route in self.routes:
 			for room in route:
-				print(f"{bcolors.OKBLUE}{room.name}{bcolors.ENDC}", end='')
+				print(f"{Colors.OKBLUE}{room.name}{Colors.ENDC}", end='')
 				if room != self.end:
 					print(' --> ', end='')
 			print('')
-		print(f"{bcolors.OKGREEN}Efficiency: {self.count_steps()}{bcolors.ENDC}")
-
-	def solve(self):
-		if self.end in self.start.halls:
-			for i in range(self.ants_num):
-				print(f"{bcolors.BOLD}L{i + 1}-{self.end.name}{bcolors.ENDC}", end=' ')
-			return
-		while self.bfs():
-			self.print_routes()
-		for route in self.final_routes:
-			for room in route:
-				room.route_link = route
-		self.final_routes.sort(key=len)
-		self.move_ants()
-		print(f"{bcolors.UNDERLINE}{bcolors.OKBLUE}Result: {self.steps}{bcolors.ENDC}")
+		print(f"{Colors.OKGREEN}Efficiency: {self.count_steps()}{Colors.ENDC}")
 
 	def route_fits(self, current_route):
 		shorter_routes_len = 0
@@ -165,3 +159,49 @@ class Solver:
 				break
 			shorter_routes_len += (len(current_route) - len(route))
 		return self.start.ants_in_room > shorter_routes_len
+
+	def current_next(self, iterable):
+		"""Make an iterator that yields an (previous, current, next) tuple per element.
+
+		Returns None if the value does not make sense (i.e. previous before
+		first and next after last).
+		"""
+		iterable = iter(iterable)
+		cur = next(iterable)
+		try:
+			while True:
+				nxt = next(iterable)
+				yield (cur, nxt)
+				cur = nxt
+		except StopIteration:
+			pass
+
+	def solve(self):
+		if self.end in self.start.halls:
+			for i in range(self.ants_num):
+				print(f"{Colors.BOLD}L{i + 1}-{self.end.name}{Colors.ENDC}", end=' ')
+			print()
+			return
+
+		while self._bfs():
+			pass
+		for room in self.rooms:
+			room.halls.clear()
+		# self.print_routes()
+		print("Rounds:", self._round - 1)
+		for route in self.routes:
+			for cur, nxt in self.current_next(route):
+				if cur in nxt.halls:
+					nxt.halls.remove(cur)
+				else:
+					cur.halls.append(nxt)
+		for room in self.rooms:
+			print(f"{room.name}")
+			for hall in room.halls:
+				print(f"==> {hall.name}")
+	# for route in self.final_routes:
+	# 	for room in route:
+	# 		room.route_link = route
+	# self.final_routes.sort(key=len)
+	# self.move_ants()
+	# print(f"{Colors.UNDERLINE}{Colors.OKBLUE}Result: {self.steps}{Colors.ENDC}")
