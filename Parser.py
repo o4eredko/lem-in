@@ -13,22 +13,44 @@ class Parser:
 			self._file = fd.read().splitlines()
 		self._line_id = 0
 		self._re_room = re.compile(r"^(\w+) (\d+) (\d+)$")
-		self._re_link = re.compile(r"")
+		self._re_link = re.compile(r"^(\w+)-(\w+)$")
+		self._room_dict = {}
+		self.allowed_commands = ('start', 'end')
+		self.verbose = verbose
 		self.ants_num = None
 		self.start = None
 		self.end = None
 		self.rooms = []
-		self.allowed_commands = ('start', 'end')
-		self.verbose = verbose
 
 	def _check_room(self, new_room):
 		if new_room.name.startswith('L'):
 			raise SyntaxError(f'Line {self._line_id + 1} | Room name cannot start with L letter')
-		for room in self.rooms:
-			if room.name == new_room.name:
-				raise SyntaxError(f'Line {self._line_id + 1} | Room with this name already exists')
-			elif room.x == new_room.x and room.y == new_room.y:
-				raise SyntaxError(f'Line {self._line_id + 1} | Room with such coordinates already exists')
+		if new_room.name in self._room_dict:
+			raise SyntaxError(f'Line {self._line_id + 1} | Room with this name already exists')
+
+	def _check_command(self, line):
+		command = line[2:]
+		if command not in self.allowed_commands:
+			raise SyntaxError(f"Line {self._line_id + 1} | Unknown command")
+		return command
+
+	def _apply_command(self, command, room):
+		if command == 'start':
+			assert not self.start, f"Line {self._line_id + 1} | Start room is already exist"
+			self.start = room
+		elif command == "end":
+			assert not self.end, f"Line {self._line_id + 1} | End room is already exist"
+			self.end = room
+
+	def _link_rooms(self, room1_name, room2_name):
+		room1 = self._room_dict.get(room1_name)
+		room2 = self._room_dict.get(room2_name)
+		if room1 is None or room2 is None:
+			raise SyntaxError(f"Line {self._line_id + 1} | Link with unknown room")
+		if room1 in room2.halls or room2 in room1.halls:
+			raise SyntaxError(f"Line {self._line_id + 1} | Double linkage")
+		room1.halls.append(room2)
+		room2.halls.append(room1)
 
 	def _parse_ants_num(self):
 		for self._line_id in range(self._line_id, len(self._file)):
@@ -59,26 +81,14 @@ class Parser:
 				continue
 			match = re.search(self._re_room, line)
 			if not match:
+				assert command is None, f"Line {self._line_id + 1} | It must be a room after command"
 				return
 			room = Room(name=match.group(1), x=match.group(2), y=match.group(3))
 			self._check_room(room)
 			self.rooms.append(room)
+			self._room_dict[room.name] = room
 			self._apply_command(command, room)
 			command = None
-
-	def _check_command(self, line):
-		command = line[2:]
-		if command not in self.allowed_commands:
-			raise SyntaxError(f"Line {self._line_id + 1} | Unknown command")
-		return command
-
-	def _apply_command(self, command, room):
-		if command == 'start':
-			assert not self.start, f"Line {self._line_id + 1} | Start room is already exist"
-			self.start = room
-		elif command == "end":
-			assert not self.end, f"Line {self._line_id + 1} | End room is already exist"
-			self.end = room
 
 	def _parse_links(self):
 		sys.stdout.write("\033[F")
@@ -92,8 +102,9 @@ class Parser:
 				if line.startswith('##'):
 					raise SyntaxError(f'Line number: {self._line_id + 1} | Commands are not allowed in this section')
 				continue
-			rooms = line.split('-')
-			self.append_halls(rooms[0], rooms[1])
+			match = self._re_link.search(line)
+			assert match, f'Line number: {self._line_id + 1} | Wrong format for link'
+			self._link_rooms(match.group(1), match.group(2))
 
 	def parse_file(self):
 		self._parse_ants_num()
@@ -110,18 +121,3 @@ class Parser:
 			print(f"Start room: {self.start.name}")
 			print(f"Start room: {self.end.name}")
 		self.start.ants_in_room = self.ants_num
-
-	def append_halls(self, room_to_link, linked_room):
-		room1 = None
-		room2 = None
-		for room in self.rooms:
-			if room.name == room_to_link:
-				room1 = room
-			elif room.name == linked_room:
-				room2 = room
-		if not room1 or not room2:
-			raise SyntaxError(f"Line {self._line_id + 1} | Link with unknown room")
-		if room1 in room2.halls or room2 in room1.halls:
-			raise SyntaxError(f"Line {self._line_id + 1} | Double linkage")
-		room1.halls.append(room2)
-		room2.halls.append(room1)
