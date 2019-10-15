@@ -1,104 +1,114 @@
 import re
-from Solver_entities import Room
+import sys
+
+from Room import Room
+
+CURSOR_UP_ONE = '\x1b[1A'
+ERASE_LINE = '\x1b[2K'
 
 
 class Parser:
-	def __init__(self, filename):
-		self.fd = open(filename, 'r')
-		self.file = self.fd.read().splitlines()
-		self.file_len = len(self.file)
-		self.line_id = 0
+	def __init__(self, filename, verbose=True):
+		with open(filename, encoding='utf-8') as fd:
+			self._file = fd.read().splitlines()
+		self._line_id = 0
+		self._re_room = re.compile(r"^(\w+) (\d+) (\d+)$")
+		self._re_link = re.compile(r"")
 		self.ants_num = None
-		self.rooms = []
 		self.start = None
 		self.end = None
+		self.rooms = []
+		self.allowed_commands = ('start', 'end')
+		self.verbose = verbose
 
-	def check_room_existent(self, new_room):
+	def _check_room(self, new_room):
+		if new_room.name.startswith('L'):
+			raise SyntaxError(f'Line {self._line_id + 1} | Room name cannot start with L letter')
 		for room in self.rooms:
 			if room.name == new_room.name:
-				raise Exception(f'Line {self.line_id + 1}: Room with this name already exists')
+				raise SyntaxError(f'Line {self._line_id + 1} | Room with this name already exists')
 			elif room.x == new_room.x and room.y == new_room.y:
-				raise Exception(f'Line {self.line_id + 1}: Room with such coordinates already exists')
+				raise SyntaxError(f'Line {self._line_id + 1} | Room with such coordinates already exists')
 
-	def parse_ants_num(self):
-		while self.line_id < self.file_len:
-			line = self.file[self.line_id]
-			print(line)
+	def _parse_ants_num(self):
+		for self._line_id in range(self._line_id, len(self._file)):
+			line = self._file[self._line_id]
+			if self.verbose:
+				print(line)
+			assert line, f"Line {self._line_id + 1} | Empty line"
 			if line.isdigit():
 				self.ants_num = int(line)
-				self.line_id += 1
+				self._line_id += 1
 				return
-			elif not line or (line[0] != '#' and line[1] != '#'):
-				raise Exception(f'Line number: {self.line_id + 1}\nInvalid number of ants')
-			self.line_id += 1
+			elif line.startswith('##'):
+				raise SyntaxError(f'Line number: {self._line_id + 1} | Commands are not allowed in this section')
+			elif not line.startswith('#'):
+				raise SyntaxError(f'Line number: {self._line_id + 1} | Invalid number of ants')
 
-	def parse_rooms(self):
-		while self.line_id < self.file_len:
-			line = self.file[self.line_id]
-			if not line:
-				raise Exception(f"Line {self.line_id + 1}: Empty line")
-			if line[0] == '#':
-				if line[1] == '#':
-					self.parse_command(line)
+	def _parse_rooms(self):
+		command = None
+		for self._line_id in range(self._line_id, len(self._file)):
+			line = self._file[self._line_id]
+			if self.verbose:
 				print(line)
-				self.line_id += 1
+			assert line, f"Line {self._line_id + 1} | Empty line"
+			if line.startswith('#'):
+				if line.startswith('##'):
+					assert command is None, f"Line {self._line_id + 1} | 2 commands in a row"
+					command = self._check_command(line)
 				continue
-			match = re.search(r"^(\w+) (\d+) (\d+)$", line)
+			match = re.search(self._re_room, line)
 			if not match:
 				return
-			print(line)
 			room = Room(name=match.group(1), x=match.group(2), y=match.group(3))
-			self.check_room_existent(room)
+			self._check_room(room)
 			self.rooms.append(room)
-			self.line_id += 1
+			self._apply_command(command, room)
+			command = None
 
-	def parse_command(self, command):
-		if command != "##start" and command != "##end":
-			raise Exception(f"Line {self.line_id + 1}: Unknown command")
-		line = self.file[self.line_id + 1]
-		print(line)
-		match = re.search(r"^(\w+) (\d+) (\d+)$", line)
-		if not match:
-			raise Exception(f"Line {self.line_id + 1}: It must be a room after command")
-		room = Room(name=match.group(1), x=match.group(2), y=match.group(3))
-		self.check_room_existent(room)
-		self.rooms.append(room)
-		if command == "##start":
-			if self.start:
-				raise Exception(f"Line {self.line_id + 1}: It can be only one start room")
+	def _check_command(self, line):
+		command = line[2:]
+		if command not in self.allowed_commands:
+			raise SyntaxError(f"Line {self._line_id + 1} | Unknown command")
+		return command
+
+	def _apply_command(self, command, room):
+		if command == 'start':
+			assert not self.start, f"Line {self._line_id + 1} | Start room is already exist"
 			self.start = room
-		elif command == "##end":
-			if self.end:
-				raise Exception(f"Line {self.line_id + 1}: It can be only one end room")
+		elif command == "end":
+			assert not self.end, f"Line {self._line_id + 1} | End room is already exist"
 			self.end = room
-		self.line_id += 1
 
-	def parse_links(self):
-		while self.line_id < self.file_len:
-			line = self.file[self.line_id]
-			if not line:
-				raise Exception(f"Line {self.line_id + 1}: Empty line")
-			print(line)
-			if line[0] == '#':
-				self.line_id += 1
+	def _parse_links(self):
+		sys.stdout.write("\033[F")
+		sys.stdout.write("\033[K")
+		for self._line_id in range(self._line_id, len(self._file)):
+			line = self._file[self._line_id]
+			if self.verbose:
+				print(line)
+			assert line, f"Line {self._line_id + 1} | Empty line"
+			if line.startswith('#'):
+				if line.startswith('##'):
+					raise SyntaxError(f'Line number: {self._line_id + 1} | Commands are not allowed in this section')
 				continue
 			rooms = line.split('-')
 			self.append_halls(rooms[0], rooms[1])
-			self.line_id += 1
 
 	def parse_file(self):
-		self.parse_ants_num()
-		self.parse_rooms()
-		self.parse_links()
+		self._parse_ants_num()
+		self._parse_rooms()
+		self._parse_links()
 		if not self.start or not self.end:
-			raise Exception("It must be a start and an end room")
-		print(f"\nNumber of ants: {self.ants_num}")
-		for room in self.rooms:
-			print(f"{room.name}:")
-			for hall in room.halls:
-				print(f"\t{hall.name}")
-		print(f"Start room: {self.start.name}")
-		print(f"Start room: {self.end.name}")
+			raise SyntaxError("It must be a start and an end room")
+		if self.verbose:
+			print(f"\nNumber of ants: {self.ants_num}")
+			for room in self.rooms:
+				print(f"{room.name}:")
+				for hall in room.halls:
+					print(f"---->{hall.name}")
+			print(f"Start room: {self.start.name}")
+			print(f"Start room: {self.end.name}")
 		self.start.ants_in_room = self.ants_num
 
 	def append_halls(self, room_to_link, linked_room):
@@ -110,8 +120,8 @@ class Parser:
 			elif room.name == linked_room:
 				room2 = room
 		if not room1 or not room2:
-			raise Exception(f"Line {self.line_id + 1}: Link with unknown room")
+			raise SyntaxError(f"Line {self._line_id + 1} | Link with unknown room")
 		if room1 in room2.halls or room2 in room1.halls:
-			raise Exception(f"Line {self.line_id + 1}: Double linkage")
+			raise SyntaxError(f"Line {self._line_id + 1} | Double linkage")
 		room1.halls.append(room2)
 		room2.halls.append(room1)

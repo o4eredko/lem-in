@@ -118,9 +118,9 @@ class Solver:
 				if self.ants[i] == self.start:
 					for route in self.final_routes:
 						if route[0].ants_in_room == 0 and self.route_fits(route):
-							self.ants[i].ants_in_room -= 1
+							self.start.ants_in_room -= 1
 							self.ants[i] = route[0]
-							self.ants[i].ants_in_room += 1
+							route[0].ants_in_room += 1
 							print(f"{bcolors.BOLD}L{i + 1}-{self.ants[i].name}{bcolors.ENDC}", end=' ')
 							break
 				elif self.ants[i] != self.end:
@@ -161,6 +161,7 @@ class Solver:
 	def route_fits(self, current_route):
 		shorter_routes_len = 0
 		for route in self.final_routes:
-			if len(route) < len(current_route) and route != current_route:
-				shorter_routes_len += (len(current_route) - len(route))
+			if route == current_route:
+				break
+			shorter_routes_len += (len(current_route) - len(route))
 		return self.start.ants_in_room > shorter_routes_len
