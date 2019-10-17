@@ -1,7 +1,8 @@
 import re
 import sys
 
-from Room import Room
+from utils import Room
+from utils import Colors
 
 CURSOR_UP_ONE = '\x1b[1A'
 ERASE_LINE = '\x1b[2K'
@@ -113,11 +114,9 @@ class Parser:
 		if not self.start or not self.end:
 			raise SyntaxError("It must be a start and an end room")
 		if self.verbose:
-			print(f"\nNumber of ants: {self.ants_num}")
+			print(f"{Colors.BOLD}Number of ants: {self.ants_num}{Colors.ENDC}")
 			for room in self.rooms:
-				print(f"{room.name}:")
-				for hall in room.halls:
-					print(f"---->{hall.name}")
-			print(f"Start room: {self.start.name}")
-			print(f"Start room: {self.end.name}")
+				print(f"{Colors.HEADER}{room.name} => {[hall.name for hall in room.halls]}{Colors.ENDC}")
+			print(f"{Colors.BOLD}Start room: {self.start.name}")
+			print(f"{Colors.BOLD}End room: {self.end.name}{Colors.ENDC}")
 		self.start.ants_in_room = self.ants_num
