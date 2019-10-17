@@ -25,7 +25,6 @@ def prev_current_next(iterable):
 
 class Solver:
 	def __init__(self, src):
-		self._round = 0
 		self.steps = 0
 		self.ants_num = src.ants_num
 		self.rooms = src.rooms
@@ -33,7 +32,7 @@ class Solver:
 		self.end = src.end
 		self.routes = []
 		self.final_routes = []
-		self.best_score = None
+		self.best_score = float('inf')
 		self.ants = [self.start] * self.ants_num
 		self.max_routes = min(self.ants_num, len(self.start.halls), len(self.end.halls))
 
@@ -93,7 +92,6 @@ class Solver:
 		Breadth-First Search. Finds the shortest path and saves it to self.routes
 		:return: bool, True if new route was found, otherwise False
 		"""
-		self._round += 1
 		visited = {self.start}
 		queue = collections.deque((self.start,))
 		while len(queue):
@@ -120,16 +118,7 @@ class Solver:
 			print()
 		print(f"{Colors.OKGREEN}Efficiency: {self._count_steps(routes)}{Colors.ENDC}")
 
-	def _find_disjoint_routes(self):
-		for i in range(self.max_routes):
-			if not self._bfs():
-				break
-
-		for room in self.rooms:
-			room.halls.clear()
-			if room.output is not None:
-				room.output.halls.clear()
-
+	def _put_routes_on_graph(self):
 		pairs = []
 		for route in self.routes:
 			for prev, cur, nxt in prev_current_next(route):
@@ -141,7 +130,7 @@ class Solver:
 					cur.halls.append(nxt)
 					if cur in nxt.halls:
 						pairs.append((cur, nxt))
-
+		self.routes.clear()
 		for room1, room2 in pairs:
 			print(f"Pair {room1.name} <==> {room2.name} removed")
 			try:
@@ -153,13 +142,40 @@ class Solver:
 			except ValueError:
 				pass
 
+	def _del_all_edges(self):
+		for room in self.rooms:
+			room.halls.clear()
+			if room.output is not None:
+				room.output.halls.clear()
+
+	def _form_routes(self):
 		for room in self.start.halls:
 			new_route = [room]
 			while room != self.end:
 				new_route.append(room.halls[0])
 				room = room.halls[0]
-			self.final_routes.append(new_route)
-		self.print_routes(self.final_routes)
+			self.routes.append(new_route)
+
+	def _find_disjoint_routes(self):
+		for route_num in range(1, self.max_routes):
+			original_halls = [room.halls[:] for room in self.rooms]
+			self.routes = []
+			for i in range(route_num):
+				if not self._bfs():
+					return
+			self._del_all_edges()
+			self._put_routes_on_graph()
+			self._form_routes()
+			for i, room in enumerate(self.rooms):
+				room.halls = original_halls[i]
+
+			print(f"{Colors.HEADER}Round: {route_num}{Colors.ENDC}")
+			self.print_routes(self.routes)
+			score = self._count_steps(self.routes)
+			if score > self.best_score:
+				return
+			self.best_score = score
+			self.final_routes = self.routes
 
 	def solve(self):
 		if self.end in self.start.halls:
@@ -173,60 +189,41 @@ class Solver:
 		a = set()
 		for route in self.final_routes:
 			for room in route:
-				if room != self.end and room != self.start and room in a:
-					raise RuntimeError(f"Intersection on {room.name}")
+				room.route_link = route
+				# if room != self.end and room != self.start and room in a:
+				# 	raise RuntimeError(f"Intersection on {room.name}")
 				a.add(room)
 
-		# while self._bfs():
-		# 	pass
-		# for room in self.rooms:
-		# 	room.halls.clear()
-		# # self.print_routes()
-		# print("Rounds:", self._round - 1)
-		# for route in self.routes:
-		# 	for cur, nxt in self.current_next(route):
-		# 		if cur in nxt.halls:
-		# 			nxt.halls.remove(cur)
-		# 		else:
-		# 			cur.halls.append(nxt)
-		# for room in self.rooms:
-		# 	print(f"{room.name}")
-		# 	for hall in room.halls:
-		# 		print(f"==> {hall.name}")
-	# for route in self.final_routes:
-	# 	for room in route:
-	# 		room.route_link = route
-	# self.final_routes.sort(key=len)
-	# self.move_ants()
-	# print(f"{Colors.UNDERLINE}{Colors.OKBLUE}Result: {self.steps}{Colors.ENDC}")
+		self.final_routes.sort(key=len)
+		self.move_ants()
+		print(f"{Colors.UNDERLINE}{Colors.OKBLUE}Result: {self.steps}{Colors.ENDC}")
 
+	def route_fits(self, current_route):
+		shorter_routes_len = 0
+		for route in self.final_routes:
+			if route == current_route:
+				break
+			shorter_routes_len += (len(current_route) - len(route))
+		return self.start.ants_in_room > shorter_routes_len
 
-	# def route_fits(self, current_route):
-	# 	shorter_routes_len = 0
-	# 	for route in self.final_routes:
-	# 		if route == current_route:
-	# 			break
-	# 		shorter_routes_len += (len(current_route) - len(route))
-	# 	return self.start.ants_in_room > shorter_routes_len
-
-	# def move_ants(self):
-	# 	while self.end.ants_in_room < self.ants_num:
-	# 		for i in range(self.ants_num):
-	# 			if self.ants[i] == self.start:
-	# 				for route in self.final_routes:
-	# 					if route[0].ants_in_room == 0 and self.route_fits(route):
-	# 						self.start.ants_in_room -= 1
-	# 						self.ants[i] = route[0]
-	# 						route[0].ants_in_room += 1
-	# 						print(f"{Colors.BOLD}L{i + 1}-{self.ants[i].name}{Colors.ENDC}", end=' ')
-	# 						break
-	# 			elif self.ants[i] != self.end:
-	# 				route = self.ants[i].route_link
-	# 				room_id = route.index(self.ants[i])
-	# 				if route[room_id] != self.end:
-	# 					self.ants[i].ants_in_room -= 1
-	# 					self.ants[i] = route[room_id + 1]
-	# 					self.ants[i].ants_in_room += 1
-	# 					print(f"{Colors.BOLD}L{i + 1}-{self.ants[i].name}{Colors.ENDC}", end=' ')
-	# 		print('')
-	# 		self.steps += 1
+	def move_ants(self):
+		while self.end.ants_in_room < self.ants_num:
+			for i in range(self.ants_num):
+				if self.ants[i] == self.start:
+					for route in self.final_routes:
+						if route[0].ants_in_room == 0 and self.route_fits(route):
+							self.start.ants_in_room -= 1
+							self.ants[i] = route[0]
+							route[0].ants_in_room += 1
+							print(f"{Colors.BOLD}L{i + 1}-{self.ants[i].name}{Colors.ENDC}", end=' ')
+							break
+				elif self.ants[i] != self.end:
+					route = self.ants[i].route_link
+					room_id = route.index(self.ants[i])
+					if route[room_id] != self.end:
+						self.ants[i].ants_in_room -= 1
+						self.ants[i] = route[room_id + 1]
+						self.ants[i].ants_in_room += 1
+						print(f"{Colors.BOLD}L{i + 1}-{self.ants[i].name}{Colors.ENDC}", end=' ')
+			print('')
+			self.steps += 1
