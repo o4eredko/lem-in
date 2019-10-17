@@ -1,4 +1,4 @@
-10
+2
 ##start
 A 1 1
 B 2 2
@@ -6,13 +6,16 @@ C 3 3
 D 4 4
 E 5 5
 F 6 6
-##end
 G 7 7
+##end
+H 8 8
 A-B
-A-C
-B-D
+B-C
 C-D
+D-H
+A-E
 D-E
-D-F
-E-G
+E-F
+F-D
 F-G
+G-H

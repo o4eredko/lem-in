@@ -20,3 +20,38 @@ class Colors:
 	ENDC = '\033[0m'
 	BOLD = '\033[1m'
 	UNDERLINE = '\033[4m'
+
+
+def prev_current_next(iterable):
+	"""
+	Make a generator that yields an (previous, current, next) tuple per element.
+	:return None if the value does not make sense (i.e. previous before
+	first and next after last).
+	"""
+	iterable = iter(iterable)
+	prev = None
+	cur = next(iterable)
+	try:
+		while True:
+			nxt = next(iterable)
+			yield (prev, cur, nxt)
+			prev = cur
+			cur = nxt
+	except StopIteration:
+		yield (prev, cur, None)
+
+
+def insert_insort(sequence, x, key=None):
+	lo = 0
+	hi = len(sequence)
+	while lo < hi:
+		mid = (lo + hi) // 2
+		if key is not None:
+			compare = key(x) < key(sequence[mid])
+		else:
+			compare = x < sequence[mid]
+		if compare:
+			hi = mid
+		else:
+			lo = mid + 1
+	sequence.insert(lo, x)

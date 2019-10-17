@@ -17,6 +17,7 @@ class Parser:
 		self._re_link = re.compile(r"^(\w+)-(\w+)$")
 		self._room_dict = {}
 		self.allowed_commands = ('start', 'end')
+		self.required_lines = None
 		self.verbose = verbose
 		self.ants_num = None
 		self.start = None
@@ -61,6 +62,7 @@ class Parser:
 			assert line, f"Line {self._line_id + 1} | Empty line"
 			if line.isdigit():
 				self.ants_num = int(line)
+				assert self.ants_num > 0, "Ants num must be more that zero"
 				self._line_id += 1
 				return
 			elif line.startswith('##'):
@@ -100,6 +102,8 @@ class Parser:
 				print(line)
 			assert line, f"Line {self._line_id + 1} | Empty line"
 			if line.startswith('#'):
+				if line.startswith('#Here is the number of lines required:'):
+					self.required_lines = int(line[38:])
 				if line.startswith('##'):
 					raise SyntaxError(f'Line number: {self._line_id + 1} | Commands are not allowed in this section')
 				continue
@@ -115,8 +119,9 @@ class Parser:
 			raise SyntaxError("It must be a start and an end room")
 		if self.verbose:
 			print(f"{Colors.BOLD}Number of ants: {self.ants_num}{Colors.ENDC}")
+			print(f"{Colors.BOLD}Links:{Colors.ENDC}")
 			for room in self.rooms:
-				print(f"{Colors.HEADER}{room.name} => {[hall.name for hall in room.halls]}{Colors.ENDC}")
+				print(f"{Colors.HEADER}{room.name:5} =>  {[hall.name for hall in room.halls]}{Colors.ENDC}")
 			print(f"{Colors.BOLD}Start room: {self.start.name}")
 			print(f"{Colors.BOLD}End room: {self.end.name}{Colors.ENDC}")
 		self.start.ants_in_room = self.ants_num
