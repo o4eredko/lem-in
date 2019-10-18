@@ -22,7 +22,6 @@ class Solver:
 		self._max_routes = min(self.ants_num, len(self.start.halls), len(self.end.halls))
 
 	def _print_routes(self, routes):
-		print(f"{Colors.HEADER}Paths found: {Colors.ENDC}")
 		if not len(routes):
 			print(f"{Colors.WARNING}{Colors.BOLD}No paths{Colors.ENDC}")
 			return None
@@ -150,7 +149,7 @@ class Solver:
 
 	def _update_final_routes(self, route_num, score):
 		if self.verbose:
-			print(f"{Colors.HEADER}Round: {route_num}{Colors.ENDC}")
+			print(f"{Colors.HEADER}Round {route_num}:{Colors.ENDC}")
 			self._print_routes(self._routes)
 		self.best_score = score
 		for route in self._routes:
@@ -197,7 +196,8 @@ class Solver:
 							self.start.ants_in_room -= 1
 							self._ants[i] = route[0]
 							route[0].ants_in_room += 1
-							print(f"{Colors.BOLD}L{i + 1}-{self._ants[i].name}{Colors.ENDC}", end=' ')
+							room_color = Colors.BOLD if self._ants[i].mark is None else self._ants[i].mark
+							print(f"{room_color}L{i + 1}-{self._ants[i].name}{Colors.ENDC}", end=' ')
 							break
 				elif self._ants[i] != self.end:
 					route = self._ants[i].route_link
@@ -206,7 +206,8 @@ class Solver:
 						self._ants[i].ants_in_room -= 1
 						self._ants[i] = route[room_id + 1]
 						self._ants[i].ants_in_room += 1
-						print(f"{Colors.BOLD}L{i + 1}-{self._ants[i].name}{Colors.ENDC}", end=' ')
+						room_color = Colors.BOLD if self._ants[i].mark is None else self._ants[i].mark
+						print(f"{room_color}L{i + 1}-{self._ants[i].name}{Colors.ENDC}", end=' ')
 			print()
 			self._steps += 1
 

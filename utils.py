@@ -9,6 +9,7 @@ class Room:
 		self.route_link = None
 		self.input = None
 		self.output = None
+		self.mark = None
 
 
 class Colors:
