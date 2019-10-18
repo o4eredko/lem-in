@@ -10,7 +10,7 @@ ERASE_LINE = '\x1b[2K'
 
 
 class Parser:
-	def __init__(self, filename, verbose=True):
+	def __init__(self, filename):
 		with open(filename, encoding='utf-8') as fd:
 			self._file = fd.read().splitlines()
 		self._line_id = 0
@@ -20,7 +20,8 @@ class Parser:
 		self.allowed_commands = ('start', 'end', 'mark')
 		self._mark_colors = itertools.cycle(('\u001b[44;1m', '\u001b[45;1m', '\u001b[46;1m', '\u001b[41;1m'))
 		self.required_lines = None
-		self.verbose = verbose
+		self.verbose = '--verbose' in sys.argv
+		self.validate = '--validate' in sys.argv
 		self.ants_num = None
 		self.start = None
 		self.end = None

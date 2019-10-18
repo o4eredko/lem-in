@@ -18,6 +18,7 @@ class Solver:
 		self.start = src.start
 		self.end = src.end
 		self.verbose = src.verbose
+		self.validate = src.validate
 		self.required_lines = src.required_lines
 		self._max_routes = min(self.ants_num, len(self.start.halls), len(self.end.halls))
 
@@ -33,12 +34,14 @@ class Solver:
 		print(f"{Colors.OKGREEN}Efficiency: {self._count_steps(routes)}{Colors.ENDC}")
 
 	def _check_intersection(self):
-		a = set()
+		visited = set()
 		for route in self.final_routes:
 			for room in route:
-				if room != self.end and room != self.start and room.name in a:
-					raise RuntimeError(f"Intersection on {room.name}")
-				a.add(room.name)
+				if room != self.end and room != self.start and room.name in visited:
+					raise RuntimeError(f"Intersection on room {room.name}")
+				visited.add(room.name)
+		else:
+			print(f"{Colors.HEADER}No intersection of paths was found!{Colors.ENDC}")
 
 	def _count_steps(self, routes):
 		if not len(routes):
@@ -230,8 +233,9 @@ class Solver:
 
 		self._find_disjoint_routes()
 		assert len(self.final_routes), "No possible path"
-		self._check_intersection()
 		self._move_ants()
+		if self.validate:
+			self._check_intersection()
 
 		if self.required_lines is None:
 			print(f"{Colors.BOLD}{Colors.OKBLUE}Result: {self._steps}{Colors.ENDC}")

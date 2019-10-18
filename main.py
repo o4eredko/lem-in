@@ -8,10 +8,9 @@ from utils import Colors
 def main():
 	if len(sys.argv) < 2:
 		raise KeyError("Usage: python lem_in map")
-	verbose = len(sys.argv) > 2 and '--verbose' in sys.argv
 	try:
 		start_time = timeit.default_timer()
-		parser = Parser(sys.argv[1], verbose=verbose)
+		parser = Parser(sys.argv[1])
 		parser.parse_file()
 		solver = Solver(parser)
 		solver.solve()
