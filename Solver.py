@@ -232,7 +232,7 @@ class Solver:
 			print(f"{Colors.BOLD}Max routes: {self._max_routes}{Colors.ENDC}")
 
 		self._find_disjoint_routes()
-		assert len(self.final_routes), "No possible path"
+		assert len(self.final_routes), "No possible solution"
 		self._move_ants()
 		if self.validate:
 			self._check_intersection()
