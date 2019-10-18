@@ -13,7 +13,7 @@ At the beginning it must be a number of ants, represented by integer > 0.
 
 Then there must be rooms, represented by following line:
 ```
-room_name x y
+name x y
 ```
 
 Where x and y are coordinates, which could be used by visualization of algorithm. Each room must have a unique name
@@ -21,8 +21,9 @@ Where x and y are coordinates, which could be used by visualization of algorithm
 There could be presented comments, which start with **#** symbol and commands, which start with **##**.
 Examples of commands:
 ```
-##start => Mark the room from the next line as *Start* Room
-##end => Mark the room from the next line as *End* Room
+##start => Use the room from the next line as *Start* Room
+##end => Use the room from the next line as *End* Room
+##mark => Mark the room from the next line with unique color inside the final output
 ```
 Then links part. It has the following format:
 ```
@@ -51,11 +52,23 @@ But I don't know what is k, so i simply increase k from **1** to **max_routes**,
 max_routes = min(ants_num, len(start.edges), len(end.edges))
 ```
 
-And I increase k until the BFS cannot find more paths or untill the new combination of paths makes the result worse, than it was on previous iteration.
-
 ## Running the program
 ```
-python3 main.py map [--verbose]
+python3 main.py map options
 map is the path to the map. You can find some of the maps inside maps/ directory
---verbose flag prints all intermediate steps inside the program
+
+options:
+    --verbose: prints all intermediate steps inside the program
+    --validate: look for path intersections
+```
+There is a generator, which can create a map file. Usage
+```
+./generator option > filename
+
+options:
+    --flow-one: generates an ant farm with distinctive path and [1] ant in it
+    --flow-ten : generates an ant farm with distinctive path and approximately [10] ants in it
+    --flow-thousand : generates an ant farm with distinctive path and approximately [100] ants in it
+    --big : generates a big map (approximately [1000] rooms) to test the time complexity
+    --big-superposition : generates a big map with overlapping paths
 ```
