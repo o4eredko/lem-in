@@ -18,7 +18,8 @@ class Parser:
 		self._re_link = re.compile(r"^(\w+)-(\w+)$")
 		self._room_dict = {}
 		self.allowed_commands = ('start', 'end', 'mark')
-		self._mark_colors = itertools.cycle(('\u001b[44;1m', '\u001b[45;1m', '\u001b[46;1m', '\u001b[41;1m'))
+		self._mark_colors = itertools.cycle(
+			('\u001b[44;1m', '\u001b[45;1m', '\u001b[46;1m', '\u001b[41;1m'))
 		self.required_lines = None
 		self.verbose = '--verbose' in sys.argv
 		self.validate = '--validate' in sys.argv
@@ -85,7 +86,6 @@ class Parser:
 			assert line, f"Line {self._line_id + 1} | Empty line"
 			if line.startswith('#'):
 				if line.startswith('##'):
-					# assert command is None, f"Line {self._line_id + 1} | 2 commands in a row"
 					commands.append(self._check_command(line))
 				continue
 			match = re.search(self._re_room, line)
@@ -97,7 +97,7 @@ class Parser:
 			self.rooms.append(room)
 			self._room_dict[room.name] = room
 			self._apply_command(commands, room)
-			commands = []
+			commands.clear()
 
 	def _parse_links(self):
 		sys.stdout.write("\033[F")
