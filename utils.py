@@ -1,3 +1,6 @@
+from contextlib import contextmanager
+
+
 class Room:
 	def __init__(self, name, x, y):
 		self.name = name
@@ -56,3 +59,11 @@ def insert_insort(sequence, x, key=None):
 		else:
 			lo = mid + 1
 	sequence.insert(lo, x)
+
+
+@contextmanager
+def ignored(*exceptions):
+	try:
+		yield
+	except exceptions:
+		pass

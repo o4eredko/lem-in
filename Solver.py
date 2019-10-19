@@ -1,12 +1,12 @@
 import collections
 import copy
 
-from utils import Colors, prev_current_next, insert_insort
+from utils import Colors, prev_current_next, insert_insort, ignored
 
 
 class Solver:
 	def __init__(self, src):
-		self._ants = None
+		self.ants = None
 		self._steps = 0
 		self._tmp_routes = None
 		self._routes = []
@@ -63,29 +63,24 @@ class Solver:
 				prev = prev.output
 			if nxt.input is not None:
 				nxt = nxt.input
-
 			duplicate = copy.copy(cur)
-			duplicate.halls = cur.halls[:]
 			duplicate.input = cur
 			cur.output = duplicate
+
+			duplicate.halls = cur.halls[:]
 			cur.halls = [prev] if prev in cur.halls else []
 			duplicate.halls.append(cur)
-			try:
+			with ignored(ValueError):
 				duplicate.halls.remove(prev)
-			except ValueError:
-				pass
-
-			try:
+			with ignored(ValueError):
 				nxt.halls[nxt.halls.index(cur)] = duplicate
-			except ValueError:
-				pass
 
 	def _save_route(self):
 		"""
 		Save new route and remove all links from start to end through that route.
 		Then duplicates all intermediate nodes to get input node and output node for each node.
-		It is a modification of Bhandari algorithm, because Bhandari allows different paths go through
-		one node, until they don't use the same edges.
+		It is a modification of Bhandari algorithm, because Bhandari allows different paths to
+		go through one node, until they don't use the same edges.
 		But my ants cannot occupy the same room and wait, so paths
 		should be node-disjoint
 		"""
@@ -93,10 +88,8 @@ class Solver:
 		tmp = self.end
 		while tmp.added_by and tmp != self.start:
 			new_route.append(tmp)
-			try:
+			with ignored(ValueError):
 				tmp.added_by.halls.remove(tmp)
-			except ValueError:
-				pass
 			tmp = tmp.added_by
 		new_route.append(self.start)
 		new_route.reverse()
@@ -106,7 +99,7 @@ class Solver:
 	def _bfs(self):
 		"""
 		Breadth-First Search. Finds the shortest path and saves it to self.routes
-		:return: bool, True if new route was found, otherwise False
+		:return: True if new route was found, otherwise False
 		"""
 		visited = {self.start}
 		queue = collections.deque((self.start,))
@@ -132,14 +125,10 @@ class Solver:
 						nxt = nxt.input
 					cur.halls.append(nxt)
 					if cur in nxt.halls:
-						try:
+						with ignored(ValueError):
 							cur.halls.remove(nxt)
-						except ValueError:
-							pass
-						try:
+						with ignored(ValueError):
 							nxt.halls.remove(cur)
-						except ValueError:
-							pass
 
 	def _form_routes(self):
 		self._routes = []
@@ -180,37 +169,37 @@ class Solver:
 				continue
 			self._update_final_routes(route_num, score)
 
-	def _route_fits(self, current_route):
-		shorter_routes_len = 0
-		for route in self.final_routes:
-			if route == current_route:
+	def _get_available_route(self):
+		for i, route in enumerate(self.final_routes):
+			first_room = route[0]
+			if not first_room.ants_in_room:
+				shorter_routes_len = sum(
+					len(route) - len(shorter_route) for shorter_route in self.final_routes[:i])
 				break
-			shorter_routes_len += (len(current_route) - len(route))
-		return self.start.ants_in_room > shorter_routes_len
+		else:
+			return None
+		return route if self.start.ants_in_room > shorter_routes_len else None
 
 	def _move_ants(self):
 		print(f"{Colors.BOLD}Final output:{Colors.ENDC} (format: L(ant_num)-(move to)(room_name))")
-		self._ants = [self.start for _ in range(self.ants_num)]
+		self.ants = [self.start for _ in range(self.ants_num)]
 		while self.end.ants_in_room < self.ants_num:
-			for i in range(self.ants_num):
-				if self._ants[i] == self.start:
-					for route in self.final_routes:
-						if not route[0].ants_in_room and self._route_fits(route):
-							self.start.ants_in_room -= 1
-							self._ants[i] = route[0]
-							route[0].ants_in_room += 1
-							room_color = Colors.BOLD if self._ants[i].mark is None else self._ants[i].mark
-							print(f"{room_color}L{i + 1}-{self._ants[i].name}{Colors.ENDC}", end=' ')
-							break
-				elif self._ants[i] != self.end:
-					route = self._ants[i].route_link
-					room_id = route.index(self._ants[i])
-					if route[room_id] != self.end:
-						self._ants[i].ants_in_room -= 1
-						self._ants[i] = route[room_id + 1]
-						self._ants[i].ants_in_room += 1
-						room_color = Colors.BOLD if self._ants[i].mark is None else self._ants[i].mark
-						print(f"{room_color}L{i + 1}-{self._ants[i].name}{Colors.ENDC}", end=' ')
+			for i, ant in enumerate(self.ants):
+				if ant == self.start:
+					route = self._get_available_route()
+					if route is None:
+						continue
+					next_room = route[0]
+				elif ant != self.end:
+					route = ant.route_link
+					next_room = route[route.index(ant) + 1]
+				else:
+					continue
+				ant.ants_in_room -= 1
+				self.ants[i] = next_room
+				next_room.ants_in_room += 1
+				room_color = next_room.mark or Colors.BOLD
+				print(f"{room_color}L{i + 1}-{next_room.name}{Colors.ENDC}", end=' ')
 			print()
 			self._steps += 1
 
@@ -223,7 +212,7 @@ class Solver:
 		otherwise, algorithm stops.
 		"""
 		if self.end in self.start.halls:
-			print(f"{Colors.BOLD}Final output:{Colors.ENDC} (format: L(ant_num)-(move to)(room_name))")
+			print(f"{Colors.BOLD}Final output:{Colors.ENDC} (format: L(ant_num)-(room_name))")
 			for i in range(self.ants_num):
 				print(f"{Colors.BOLD}L{i + 1}-{self.end.name}{Colors.ENDC}", end=' ')
 			print()
@@ -238,8 +227,8 @@ class Solver:
 			self._check_intersection()
 
 		if self.required_lines is None:
-			print(f"{Colors.BOLD}{Colors.OKBLUE}Result: {self._steps}{Colors.ENDC}")
+			print(f"{Colors.OKBLUE}Result: {self._steps}{Colors.ENDC}")
 		elif self._steps <= self.required_lines:
-			print(f"{Colors.BOLD}{Colors.OKBLUE}Result: {self._steps} <= {self.required_lines}{Colors.ENDC}")
+			print(f"{Colors.OKBLUE}Result: {self._steps} <= {self.required_lines}{Colors.ENDC}")
 		else:
-			print(f"{Colors.BOLD}{Colors.FAIL}Result: {self._steps} > {self.required_lines}{Colors.ENDC}")
+			print(f"{Colors.FAIL}Result: {self._steps} > {self.required_lines}{Colors.ENDC}")
