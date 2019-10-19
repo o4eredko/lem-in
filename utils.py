@@ -9,7 +9,7 @@ class Room:
 		self.ants_in_room = 0
 		self.halls = []
 		self.added_by = None
-		self.route_link = None
+		self.route = None
 		self.input = None
 		self.output = None
 		self.mark = None

@@ -15,7 +15,7 @@ def main():
 		solver = Solver(parser)
 		solver.solve()
 		time = timeit.default_timer() - start_time
-		print(f"Execution time: {Colors.BOLD}{time}{Colors.ENDC} seconds")
+		print(f"{Colors.BOLD}Time: {Colors.ENDC}{round(time, 4)}s for {len(solver.rooms)} rooms")
 	except (SyntaxError, AssertionError, RuntimeError, FileNotFoundError) as e:
 		red_color = "\033[0;31m"
 		no_color = "\033[0m"

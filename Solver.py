@@ -48,6 +48,8 @@ class Solver:
 			return float('inf')
 		steps = 0
 		ants_moved = 0
+		if len(routes) == 1 and routes[0][0] == self.end:
+			return 1
 		while ants_moved < self.ants_num:
 			steps += 1
 			for route in routes:
@@ -57,23 +59,22 @@ class Solver:
 
 	def _duplicate_nodes(self, route):
 		for prev, cur, nxt in prev_current_next(route):
-			if cur == self.start or cur == self.end or cur.input is not None or cur.output is not None:
-				continue
-			if prev.output is not None:
-				prev = prev.output
-			if nxt.input is not None:
-				nxt = nxt.input
-			duplicate = copy.copy(cur)
-			duplicate.input = cur
-			cur.output = duplicate
+			if cur != self.start and cur != self.end and cur.input == cur.output is None:
+				if prev.output is not None:
+					prev = prev.output
+				if nxt.input is not None:
+					nxt = nxt.input
+				duplicate = copy.copy(cur)
+				duplicate.input = cur
+				cur.output = duplicate
 
-			duplicate.halls = cur.halls[:]
-			cur.halls = [prev] if prev in cur.halls else []
-			duplicate.halls.append(cur)
-			with ignored(ValueError):
-				duplicate.halls.remove(prev)
-			with ignored(ValueError):
-				nxt.halls[nxt.halls.index(cur)] = duplicate
+				duplicate.halls = cur.halls[:]
+				cur.halls = [prev] if prev in cur.halls else []
+				duplicate.halls.append(cur)
+				with ignored(ValueError):
+					duplicate.halls.remove(prev)
+				with ignored(ValueError):
+					nxt.halls[nxt.halls.index(cur)] = duplicate
 
 	def _save_route(self):
 		"""
@@ -146,7 +147,7 @@ class Solver:
 		self.best_score = score
 		for route in self._routes:
 			for room in route:
-				room.route_link = route
+				room.route = route
 		self.final_routes = self._routes
 
 	def _find_disjoint_routes(self):
@@ -172,7 +173,7 @@ class Solver:
 	def _get_available_route(self):
 		for i, route in enumerate(self.final_routes):
 			first_room = route[0]
-			if not first_room.ants_in_room:
+			if not first_room.ants_in_room or first_room == self.end:
 				shorter_routes_len = sum(
 					len(route) - len(shorter_route) for shorter_route in self.final_routes[:i])
 				break
@@ -181,20 +182,19 @@ class Solver:
 		return route if self.start.ants_in_room > shorter_routes_len else None
 
 	def _move_ants(self):
-		print(f"{Colors.BOLD}Final output:{Colors.ENDC} (format: L(ant_num)-(move to)(room_name))")
+		print(f"{Colors.BOLD}Final output:{Colors.ENDC} (format: L(ant_num)-(room_name))")
 		self.ants = [self.start for _ in range(self.ants_num)]
 		while self.end.ants_in_room < self.ants_num:
 			for i, ant in enumerate(self.ants):
+				if ant == self.end:
+					continue
 				if ant == self.start:
 					route = self._get_available_route()
 					if route is None:
 						continue
 					next_room = route[0]
-				elif ant != self.end:
-					route = ant.route_link
-					next_room = route[route.index(ant) + 1]
 				else:
-					continue
+					next_room = ant.route[ant.route.index(ant) + 1]
 				ant.ants_in_room -= 1
 				self.ants[i] = next_room
 				next_room.ants_in_room += 1
@@ -211,24 +211,19 @@ class Solver:
 		On each iteration i compare results and if it become better, i go to the next iteration,
 		otherwise, algorithm stops.
 		"""
-		if self.end in self.start.halls:
-			print(f"{Colors.BOLD}Final output:{Colors.ENDC} (format: L(ant_num)-(room_name))")
-			for i in range(self.ants_num):
-				print(f"{Colors.BOLD}L{i + 1}-{self.end.name}{Colors.ENDC}", end=' ')
-			print()
-			return
 		if self.verbose:
 			print(f"{Colors.BOLD}Max routes: {self._max_routes}{Colors.ENDC}")
-
 		self._find_disjoint_routes()
 		assert len(self.final_routes), "No possible solution"
 		self._move_ants()
 		if self.validate:
 			self._check_intersection()
 
+		print(Colors.BOLD, end='')
 		if self.required_lines is None:
-			print(f"{Colors.OKBLUE}Result: {self._steps}{Colors.ENDC}")
+			print(f"{Colors.OKBLUE}Result: {self._steps}")
 		elif self._steps <= self.required_lines:
-			print(f"{Colors.OKBLUE}Result: {self._steps} <= {self.required_lines}{Colors.ENDC}")
+			print(f"{Colors.OKBLUE}Result: {self._steps} <= {self.required_lines}")
 		else:
-			print(f"{Colors.FAIL}Result: {self._steps} > {self.required_lines}{Colors.ENDC}")
+			print(f"{Colors.FAIL}Result: {self._steps} > {self.required_lines}")
+		print(Colors.ENDC, end='')
